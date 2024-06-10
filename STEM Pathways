@@ -1,0 +1,1132 @@
+library(tidyverse)
+library(openxlsx)
+library(stringr)
+library(gridExtra)
+library(ggrepel)
+
+final_analytic_data<-readRDS("final_analytic_data_recode_5.13.RDS")
+
+#overall visual statewide ----
+statewide_all_by_year <- final_analytic_data %>% 
+  filter(course_cat_9th!="") %>%
+  group_by(cohort_year) %>% 
+  summarise(n_all=n())
+statewide_course_by_year <- final_analytic_data %>% 
+  filter(course_cat_9th!="") %>%
+  group_by(cohort_year,course_cat_9th) %>% 
+  summarise(n_stu=n())
+
+combined_statewide_by_year <- statewide_course_by_year %>% 
+  left_join(statewide_all_by_year, by=c("cohort_year")) %>% 
+  mutate(percent=(round((n_stu/n_all)*100,digits = 1))) 
+combined_statewide_by_year <-   subset(combined_statewide_by_year, percent!=0) %>% 
+  filter(cohort_year=="2016-2017" | cohort_year=="2018-2019" |cohort_year=="2020-2021")
+combined_statewide_by_year <-   subset(combined_statewide_by_year, !is.na(combined_statewide_by_year$course_cat_9th))
+
+combined_statewide_by_year$course_cat_9th <- factor(combined_statewide_by_year$course_cat_9th, levels = c("Biology", "Other Science Courses", "Physics", "No Science", "Chemistry"))
+
+
+statewide_bar_plot <- ggplot(combined_statewide_by_year, aes(x=course_cat_9th, y=percent, fill=course_cat_9th)) +
+  geom_bar(stat="identity")+
+  scale_fill_manual(values = c('#129BBA', '#056A54', '#CFCFC3', '#318481', "#50C878") )+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  ggtitle("Statewide Enrollment Percentage of Courses by Cohort Year")+
+  geom_text(aes(label = paste0(percent,'%')),
+            position = position_stack(vjust = 0.5), size = 4)+
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 8))+
+  theme(
+    panel.grid.major = element_blank(), # Remove major gridlines
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    legend.position = "bottom"
+  )+   
+  theme(axis.text.y = element_text(size=14),
+             panel.border = element_rect(colour = "grey", fill=NA, size=2))+
+  facet_wrap(~cohort_year,scales = "free_x")+ #add missing x axis lables
+  guides(fill = guide_legend(title = NULL))+
+  labs(y = "Percentage of Students",x="")
+
+
+statewide_bar_plot
+
+
+# English Language Learner Section ------
+section_1_all_variables <- final_analytic_data<-readRDS("final_analytic_data_recode_5.13.RDS")
+lep_course_1617 <- section_1_all_variables  %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2016_2017) & is.na(lep_end_date_2016_2017),1,0))%>%
+  group_by(course_cat_9th,lep_ind)%>%
+  summarize(n_stu=n())
+
+lep_overall_1617<-section_1_all_variables%>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2016_2017) & is.na(lep_end_date_2016_2017),1,0))%>%
+  group_by(lep_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_lep_1617<-lep_course_1617%>%
+  left_join(lep_overall_1617,by=c("lep_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+lep_course_1718 <- section_1_all_variables  %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2017_2018) & is.na(lep_end_date_2017_2018),1,0))%>%
+  group_by(course_cat_9th,lep_ind)%>%
+  summarize(n_stu=n())
+
+lep_overall_1718<-section_1_all_variables%>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2017_2018) & is.na(lep_end_date_2017_2018),1,0))%>%
+  group_by(lep_ind)%>%
+  summarize(n_stu_total=n())
+
+
+
+combined_lep_1718<-lep_course_1718%>%
+  left_join(lep_overall_1718,by=c("lep_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+lep_course_1819 <- section_1_all_variables  %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2018_2019) & is.na(lep_end_date_2018_2019),1,0))%>%
+  group_by(course_cat_9th,lep_ind)%>%
+  summarize(n_stu=n())
+
+lep_overall_1819<-section_1_all_variables%>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2018_2019) & is.na(lep_end_date_2018_2019),1,0))%>%
+  group_by(lep_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_lep_1819<-lep_course_1819%>%
+  left_join(lep_overall_1819,by=c("lep_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+lep_course_1920 <- section_1_all_variables  %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2019_2020) & is.na(lep_end_date_2019_2020),1,0))%>%
+  group_by(course_cat_9th,lep_ind)%>%
+  summarize(n_stu=n())
+
+lep_overall_1920<-section_1_all_variables%>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2019_2020) & is.na(lep_end_date_2019_2020),1,0))%>%
+  group_by(lep_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_lep_1920<-lep_course_1920%>%
+  left_join(lep_overall_1920,by=c("lep_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+
+lep_course_2021 <- section_1_all_variables  %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2020_2021) & is.na(lep_end_date_2020_2021),1,0))%>%
+  group_by(course_cat_9th,lep_ind)%>%
+  summarize(n_stu=n())
+
+lep_overall_2021<-section_1_all_variables%>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(lep_ind=ifelse(!is.na(lep_start_date_2020_2021) & is.na(lep_end_date_2020_2021),1,0))%>%
+  group_by(lep_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_lep_2021<-lep_course_2021%>%
+  left_join(lep_overall_2021,by=c("lep_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+#all_lep_dfs<-rbind(combined_lep_1617,combined_lep_1718,combined_lep_1819,combined_lep_1920,combined_lep_2021)
+all_lep_dfs<-rbind(combined_lep_1617,combined_lep_1819,combined_lep_2021)
+
+
+all_lep_dfs$course_cat_9th<-factor(all_lep_dfs$course_cat_9th,levels=c("Applied","Biology","Chemistry","No Science",
+                                                                       "Other Science Courses","Physics")) 
+all_lep_dfs <- subset(all_lep_dfs, percent!=0)
+
+lep_bar_plot<-all_lep_dfs%>%
+  arrange(cohort_year,lep_ind,percent)%>%
+  mutate(lep_ind=case_when(lep_ind==1~"English Language Learner",
+                           lep_ind==0~"Not English Language Learner"))%>%
+  ggplot(aes(x=lep_ind, y=percent, fill=course_cat_9th,percent)) +
+  geom_bar(stat="identity", position=position_stack())+
+  geom_text(aes(label=ifelse(nchar(percent) < 3,paste0(percent,".0%"),paste0(percent, "%"))),position = position_stack(vjust = 0.5),size=4)+
+  facet_wrap(~cohort_year,scales = "free_x")+
+  theme_minimal()+
+  theme(
+    panel.grid.major = element_blank(), # Remove major gridlines
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    axis.title.x = element_blank(),
+    legend.position = "bottom"
+  )+   
+  theme(axis.text.y = element_text(size=14),
+        panel.border = element_rect(colour = "grey", fill=NA, size=2))+
+  scale_fill_manual(values=c('#325694','#129BBA', "#50C878", '#318481', '#056A54', '#CFCFC3'))+
+  guides(fill = guide_legend(title = NULL))+
+  ggtitle("Enrollment Percentage of Courses in Ninth Grade")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  labs(y = "Percentage of Students")
+lep_bar_plot
+
+# Free and Reduced Lunch Section -----
+free_and_reduced_lunch_course_1617 <- section_1_all_variables  %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2016_2017 == "R" | freeandreducedratelunchstatus_2016_2017 == "F",1,0))%>%
+  group_by(course_cat_9th,free_and_reduced_lunch_ind)%>%
+  summarize(n_stu=n())
+
+free_and_reduced_lunch_overall_1617<-section_1_all_variables%>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2016_2017 == "R" | freeandreducedratelunchstatus_2016_2017 == "F",1,0))%>%
+  group_by(free_and_reduced_lunch_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_free_and_reduced_lunch_1617<-free_and_reduced_lunch_course_1617%>%
+  left_join(free_and_reduced_lunch_overall_1617,by=c("free_and_reduced_lunch_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+
+free_and_reduced_lunch_course_1718 <- section_1_all_variables  %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2017_2018 == "R" | freeandreducedratelunchstatus_2017_2018 == "F",1,0))%>%
+  group_by(course_cat_9th,free_and_reduced_lunch_ind)%>%
+  summarize(n_stu=n())
+
+free_and_reduced_lunch_overall_1718<-section_1_all_variables%>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2017_2018 == "R" | freeandreducedratelunchstatus_2017_2018 == "F",1,0))%>%
+  group_by(free_and_reduced_lunch_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_free_and_reduced_lunch_1718<-free_and_reduced_lunch_course_1718%>%
+  left_join(free_and_reduced_lunch_overall_1718,by=c("free_and_reduced_lunch_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+free_and_reduced_lunch_course_1819 <- section_1_all_variables  %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2018_2019 == "R" | freeandreducedratelunchstatus_2018_2019 == "F",1,0))%>%
+  group_by(course_cat_9th,free_and_reduced_lunch_ind)%>%
+  summarize(n_stu=n())
+
+free_and_reduced_lunch_overall_1819<-section_1_all_variables%>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2018_2019 == "R" | freeandreducedratelunchstatus_2018_2019 == "F",1,0))%>%
+  group_by(free_and_reduced_lunch_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_free_and_reduced_lunch_1819<-free_and_reduced_lunch_course_1819%>%
+  left_join(free_and_reduced_lunch_overall_1819,by=c("free_and_reduced_lunch_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+
+free_and_reduced_lunch_course_1920 <- section_1_all_variables  %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2019_2020 == "R" | freeandreducedratelunchstatus_2019_2020 == "F",1,0))%>%
+  group_by(course_cat_9th,free_and_reduced_lunch_ind)%>%
+  summarize(n_stu=n())
+
+free_and_reduced_lunch_overall_1920<-section_1_all_variables%>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2019_2020 == "R" | freeandreducedratelunchstatus_2019_2020 == "F",1,0))%>%
+  group_by(free_and_reduced_lunch_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_free_and_reduced_lunch_1920<-free_and_reduced_lunch_course_1920%>%
+  left_join(free_and_reduced_lunch_overall_1920,by=c("free_and_reduced_lunch_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+free_and_reduced_lunch_course_2021 <- section_1_all_variables  %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2020_2021 == "R" | freeandreducedratelunchstatus_2020_2021 == "F",1,0))%>%
+  group_by(course_cat_9th,free_and_reduced_lunch_ind)%>%
+  summarize(n_stu=n())
+
+free_and_reduced_lunch_overall_2021<-section_1_all_variables%>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(free_and_reduced_lunch_ind=ifelse(freeandreducedratelunchstatus_2020_2021 == "R" | freeandreducedratelunchstatus_2020_2021 == "F",1,0))%>%
+  group_by(free_and_reduced_lunch_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_free_and_reduced_lunch_2021<-free_and_reduced_lunch_course_2021%>%
+  left_join(free_and_reduced_lunch_overall_2021,by=c("free_and_reduced_lunch_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+
+#all_free_and_reduced_lunch_dfs<-rbind(combined_free_and_reduced_lunch_1617,combined_free_and_reduced_lunch_1718,combined_free_and_reduced_lunch_1819,combined_free_and_reduced_lunch_1920,combined_free_and_reduced_lunch_2021)
+all_free_and_reduced_lunch_dfs<-rbind(combined_free_and_reduced_lunch_1617, combined_free_and_reduced_lunch_1819,combined_free_and_reduced_lunch_2021)
+
+
+all_free_and_reduced_lunch_dfs$course_cat_9th<-factor(all_free_and_reduced_lunch_dfs$course_cat_9th,levels=c("Applied","Biology","Chemistry","No Science",
+                                                                                                             "Other Science Courses","Physics"))
+all_free_and_reduced_lunch_dfs <- subset(all_free_and_reduced_lunch_dfs, percent!=0)
+
+free_and_reduced_lunch_bar_plot<-all_free_and_reduced_lunch_dfs%>%
+  filter(!is.na(free_and_reduced_lunch_ind))%>%
+  arrange(cohort_year,free_and_reduced_lunch_ind,percent)%>%
+  mutate(free_and_reduced_lunch_ind=case_when(free_and_reduced_lunch_ind==1 ~ "Economically Disadvantaged"  ,
+                                              free_and_reduced_lunch_ind==0 ~ "Not Economically Disadvantaged")) %>%
+  ggplot(aes(x=free_and_reduced_lunch_ind, y=percent,fill=course_cat_9th,percent)) +
+  geom_bar(stat="identity", position=position_stack())+
+  geom_text(aes(label=ifelse(nchar(percent) < 3,paste0(percent,".0%"),paste0(percent, "%"))),position = position_stack(vjust = 0.5),size=4)+
+  facet_wrap(~cohort_year,scales = "free_x")+
+  theme_minimal()+
+  theme(
+    panel.grid.major = element_blank(), # Remove major gridlines
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    axis.title.x = element_blank(),
+    legend.position = "bottom"
+  )+   
+  theme(axis.text.y = element_text(size=14),
+        panel.border = element_rect(colour = "grey", fill=NA, size=2))+
+  scale_fill_manual(values=c('#325694','#129BBA', "#50C878", '#318481', '#056A54', '#CFCFC3'))+
+  guides(fill = guide_legend(title = NULL))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  ggtitle("Enrollment Percentage of Courses in Ninth Grade")+
+  labs(y = "Percentage of Students")
+free_and_reduced_lunch_bar_plot
+
+
+# Sped Section ------
+sped_course_1617 <- section_1_all_variables  %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2016_2017)& specialeducationclassification_2016_2017 != '99',1,0))%>%
+  group_by(course_cat_9th,sped_ind)%>%
+  summarize(n_stu=n())
+
+sped_overall_1617<-section_1_all_variables%>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2016_2017)& specialeducationclassification_2016_2017 != '99',1,0))%>%
+  group_by(sped_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_sped_1617<-sped_course_1617%>%
+  left_join(sped_overall_1617,by=c("sped_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+sped_course_1718 <- section_1_all_variables  %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2017_2018)& specialeducationclassification_2017_2018 != '99',1,0))%>%
+  group_by(course_cat_9th,sped_ind)%>%
+  summarize(n_stu=n())
+
+sped_overall_1718<-section_1_all_variables%>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2017_2018)& specialeducationclassification_2017_2018 != '99',1,0))%>%
+  group_by(sped_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_sped_1718<-sped_course_1718%>%
+  left_join(sped_overall_1718,by=c("sped_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+sped_course_1819 <- section_1_all_variables  %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2018_2019)& specialeducationclassification_2018_2019 != '99',1,0))%>%
+  group_by(course_cat_9th,sped_ind)%>%
+  summarize(n_stu=n())
+
+sped_overall_1819<-section_1_all_variables%>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2018_2019)& specialeducationclassification_2018_2019 != '99',1,0))%>%
+  group_by(sped_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_sped_1819<-sped_course_1819%>%
+  left_join(sped_overall_1819,by=c("sped_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+sped_course_1920 <- section_1_all_variables  %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2019_2020)& specialeducationclassification_2019_2020 != '99',1,0))%>%
+  group_by(course_cat_9th,sped_ind)%>%
+  summarize(n_stu=n())
+
+sped_overall_1920<-section_1_all_variables%>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2019_2020)& specialeducationclassification_2019_2020 != '99',1,0))%>%
+  group_by(sped_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_sped_1920<-sped_course_1920%>%
+  left_join(sped_overall_1920,by=c("sped_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+
+sped_course_2021 <- section_1_all_variables  %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2020_2021)& specialeducationclassification_2020_2021 != '99',1,0))%>%
+  group_by(course_cat_9th,sped_ind)%>%
+  summarize(n_stu=n())
+
+sped_overall_2021<-section_1_all_variables%>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  mutate(sped_ind=ifelse(!is.na(specialeducationclassification_2020_2021)& specialeducationclassification_2020_2021 != '99',1,0))%>%
+  group_by(sped_ind)%>%
+  summarize(n_stu_total=n())
+
+
+combined_sped_2021<-sped_course_2021%>%
+  left_join(sped_overall_2021,by=c("sped_ind"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021")%>%
+  select(-n_stu,
+         -n_stu_total)
+
+#all_sped_dfs<-rbind(combined_sped_1617,combined_sped_1718,combined_sped_1819,combined_sped_1920,combined_sped_2021)
+all_sped_dfs<-rbind(combined_sped_1617,combined_sped_1819,combined_sped_2021)
+
+
+all_sped_dfs$course_cat_9th<-factor(all_sped_dfs$course_cat_9th,levels=c("Applied","Biology","Chemistry","No Science",
+                                                                         "Other Science Courses","Physics"))
+all_sped_dfs <- subset(all_sped_dfs, percent!=0) 
+all_sped_dfs <- all_sped_dfs %>% 
+  mutate(sped_variable=case_when(sped_ind==0 ~ "Not Special Education Student",
+                                 sped_ind==1 ~ "Special Education Student"))
+all_sped_dfs$sped_variable<-factor(all_sped_dfs$sped_variable,levels=c("Special Education Student", "Not Special Education Student"))
+
+sped_bar_plot<-all_sped_dfs%>%
+  filter(!is.na(sped_ind))%>%
+  arrange(cohort_year,sped_ind,percent)%>%
+  ggplot(aes(x=sped_variable, y=percent, fill=course_cat_9th,percent)) +
+  geom_bar(stat="identity", position=position_stack())+
+  geom_text(aes(label=ifelse(nchar(percent) < 3,paste0(percent,".0%"),paste0(percent, "%"))),position = position_stack(vjust = 0.5),size=4)+
+  facet_wrap(~cohort_year,scales = "free_x")+
+  theme_minimal()+
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        #axis.text.y = element_text(size = 8))+
+  theme(
+    panel.grid.major = element_blank(), # Remove major gridlines
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    axis.title.x = element_blank(),
+    legend.position = "bottom"
+  )+   
+  theme(axis.text.y = element_text(size=14),
+        panel.border = element_rect(colour = "grey", fill=NA, size=2))+
+  scale_fill_manual(values=c('#325694','#129BBA', "#50C878", '#318481', '#056A54', '#CFCFC3'))+
+  guides(fill = guide_legend(title = NULL))+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  ggtitle("Enrollment Percentage of Courses in Ninth Grade")+
+  labs(y = "Percentage of Students")
+sped_bar_plot
+
+
+
+
+
+
+
+
+
+# Race -----
+# data set from Jessica 
+library(tidyverse)
+library(openxlsx)
+section_1_all_variables_updated <- readRDS("section_1_all_variables_updated.RDS")
+data <- readRDS('final_analytic_file_with_course_race_cat.RDS')
+race_info <- data %>% 
+  select(rustudentkey,race) 
+
+final_analytic_data <- final_analytic_data %>% 
+  left_join(race_info, by=c("rustudentkey","cohort_year"))
+# wee need to create new variable stu/all (e.g. percentage = asian_bio_2016/asian_all_2016)
+race_course <- final_analytic_data %>% 
+  filter(cohort_year=="2016-2017"|cohort_year=="2018-2019"|cohort_year=="2020-2021") %>%
+  filter(race!="" & course_cat_9th!="") %>%
+  group_by(cohort_year, course_cat_9th, race) %>% 
+  summarise(n_stu=n())
+
+race_overall<- final_analytic_data %>% 
+  filter(cohort_year=="2016-2017"|cohort_year=="2018-2019"|cohort_year=="2020-2021") %>%
+  filter(race!="" & course_cat_9th!="") %>%
+  group_by(cohort_year, race) %>% 
+  summarise(n_all=n())
+
+combined_race <- race_course %>% 
+  left_join(race_overall, by=c("cohort_year","race")) %>% 
+  mutate(percent=(round((n_stu/n_all)*100,digits = )))
+
+
+combined_race <-   subset(combined_race, percent!=0)
+
+combined_race$race <- as.factor(combined_race$race)
+levels(combined_race$race)[levels(combined_race$race) == "Hispanic"] <- "Latinx"
+levels(combined_race$race)
+
+race_bar_plot <- ggplot(combined_race, aes(x=race, y=percent, fill=course_cat_9th)) +
+  geom_bar(stat="identity", position=position_stack())+
+  scale_fill_manual(values = c('#325694','#129BBA', "#50C878", '#318481', '#056A54', '#CFCFC3') )+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  ggtitle("Enrollment Percentage of Courses by Race")+
+  geom_text_repel(aes(label = paste0(percent,'%')),
+                  direction = "y",
+            position = position_stack(vjust = 0.5), size = 4)+
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 8))+  
+  theme(
+          panel.grid.major = element_blank(), # Remove major gridlines
+          panel.grid.minor = element_blank(),
+          text = element_text(size = 16),
+          axis.text = element_text(size = 16),
+          legend.position = "bottom"
+        )+ 
+  theme(axis.text.y = element_text(size=14),
+        panel.border = element_rect(colour = "grey", fill=NA, size=2)) +
+  facet_wrap(~cohort_year,scales = "free_x")+ #add missing x axis lables
+  guides(fill = guide_legend(title = NULL))+
+  labs(y = "Percentage of Students",x="")
+
+
+race_bar_plot
+
+
+# School Need -----
+school_need <- read.xlsx("School_Data_with_Need_Levels_2018-2019.xlsx") %>% 
+  mutate(school_id=as.character(school_id),
+         school_id=str_pad(school_id, width=9, pad='0')) %>% 
+  filter(!is.na(county_name))
+school_need$county_name <- str_to_title(school_need$county_name) 
+
+final_analytic_data_with_school_need <- final_analytic_data %>% 
+  mutate(school_id=paste0(entry_county,entry_district,entry_school))%>%
+  left_join(school_need,by=c("school_id"))
+
+
+need_course <- final_analytic_data_with_school_need %>% 
+  filter(cohort_year=="2016-2017"|cohort_year=="2018-2019"|cohort_year=="2020-2021") %>%
+  filter(course_cat_9th !="") %>% 
+  select(course_cat_9th, school_risk_category,cohort_year) %>% 
+  group_by(course_cat_9th,school_risk_category,cohort_year)%>%
+  summarize(n_stu=n())
+
+need_course_all <- final_analytic_data_with_school_need %>% 
+  filter(cohort_year=="2016-2017"|cohort_year=="2018-2019"|cohort_year=="2020-2021") %>%
+  filter(course_cat_9th !="") %>% 
+  select(course_cat_9th, school_risk_category,cohort_year) %>% 
+  group_by(school_risk_category,cohort_year)%>%
+  summarize(n_stu_total=n())
+
+
+combined_need_course <- need_course %>% 
+  left_join(need_course_all, by=c("school_risk_category","cohort_year")) %>% 
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent, digits  = 1),
+         school_risk_category = ifelse(is.na(school_risk_category), "No Need Category Assigned", school_risk_category))
+combined_need_course <- subset(combined_need_course, percent!=0)
+#combined_need_course[which(is.na(combined_need_course))] <- "No Need Category Assigned"
+#combined_need_course <- subset(combined_need_course, !is.na(combined_need_course$school_risk_category))
+
+# re-order
+desired_order <- c("Lowest Need", "Low Need", "Moderate Need", "High Need","Highest Need","No Need Category Assigned")
+combined_need_course$school_risk_category <- factor(combined_need_course$school_risk_category, levels = desired_order)
+
+
+need_bar_plot <- ggplot(combined_need_course, aes(x=school_risk_category, y=percent, fill=course_cat_9th)) +
+  geom_bar(stat="identity", position=position_stack())+
+  scale_fill_manual(values = c('#325694','#129BBA', "#50C878", '#318481', '#056A54', '#CFCFC3') )+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  ggtitle("Enrollment Percentage of Courses by School Need Level")+
+  geom_text_repel(aes(label = paste0(percent,'%')),
+                  direction = "y", 
+                  #nudge_x = 0,
+            position = position_stack(vjust = 0.5), size = 4)+
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 8))+
+  theme(
+    panel.grid.major = element_blank(), # Remove major gridlines
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    legend.position = "bottom"
+  )+   
+  theme(axis.text.y = element_text(size=14),
+        panel.border = element_rect(colour = "grey", fill=NA, size=2))+
+  facet_wrap(~cohort_year,scales = "free_x", ncol=5)+ #add missing x axis lables
+  guides(fill = guide_legend(title = NULL))+
+  labs(y = "Percentage of Students", x="")
+
+
+need_bar_plot
+
+# Entry School----
+
+library(tidyverse)
+library(stringr)
+school_need_xwalk <- read.csv("school_need_xwalk.csv") %>% 
+  mutate(school_id=as.character(school_id),
+         school_id=str_pad(school_id, width=9, pad='0'))
+final_analytic_data <- readRDS("section_1_all_variables_updated.RDS") %>% 
+  mutate(school_id=paste0(entry_county,entry_district,entry_school))%>%
+  left_join(school_need_xwalk,by=c("school_id"))
+final_analytic_data$countyname <- str_to_title(final_analytic_data$countyname)
+
+final_analytic_data <- final_analytic_data_with_school_need
+school_course_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,schoolname)%>%
+  summarize(n_stu=n())
+
+school_overall_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(schoolname)%>%
+  summarize(n_stu_total=n())
+
+combined_school_1617 <- school_course_1617 %>%
+  left_join(school_overall_1617,by=c("schoolname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017") %>% 
+  select(course_cat_9th,schoolname,percent)
+
+school_1617 <- combined_school_1617 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) %>% 
+  filter (schoolname != "Collingswood Middle School" & schoolname != "Eisenhower Middle School" & schoolname != "Lacey Township Middle School"& schoolname != "Linwood Middle School"& schoolname != "Linwood Middle School"& schoolname != "Memorial Middle School")
+
+
+
+school_course_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,schoolname)%>%
+  summarize(n_stu=n())
+
+school_overall_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(schoolname)%>%
+  summarize(n_stu_total=n())
+
+combined_school_1718 <- school_course_1718 %>%
+  left_join(school_overall_1718,by=c("schoolname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018") %>% 
+  select(course_cat_9th,schoolname,percent)
+
+school_1718 <- combined_school_1718 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) %>% 
+  filter (schoolname != "Linwood Middle School" & schoolname != "Manchester Regional Day School" &schoolname != "Roy W. Brown Middle School" )
+
+
+
+school_course_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,schoolname)%>%
+  summarize(n_stu=n())
+
+school_overall_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(schoolname)%>%
+  summarize(n_stu_total=n())
+
+combined_school_1819 <- school_course_1819 %>%
+  left_join(school_overall_1819,by=c("schoolname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019") %>% 
+  select(course_cat_9th,schoolname,percent)
+
+school_1819 <- combined_school_1819 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) %>% 
+  filter (schoolname != "Linwood Middle School" & schoolname != "Manchester Regional Day School" )
+
+
+
+school_course_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,schoolname)%>%
+  summarize(n_stu=n())
+
+school_overall_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(schoolname)%>%
+  summarize(n_stu_total=n())
+
+combined_school_1920 <- school_course_1920 %>%
+  left_join(school_overall_1920,by=c("schoolname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020") %>% 
+  select(course_cat_9th,schoolname,percent)
+
+school_1920 <- combined_school_1920 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+
+
+
+
+school_course_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,schoolname)%>%
+  summarize(n_stu=n())
+
+school_overall_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(schoolname)%>%
+  summarize(n_stu_total=n())
+
+combined_school_2021 <- school_course_2021 %>%
+  left_join(school_overall_2021,by=c("schoolname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021") %>% 
+  select(course_cat_9th,schoolname,percent)
+
+school_2021 <- combined_school_2021 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+school_2021 <- subset(school_2021, !is.na(schoolname))
+
+
+# Entry County ----
+county_course_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,countyname)%>%
+  summarize(n_stu=n())
+
+county_overall_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(countyname)%>%
+  summarize(n_stu_total=n())
+
+combined_county_1617 <- county_course_1617 %>%
+  left_join(county_overall_1617,by=c("countyname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017") %>% 
+  select(course_cat_9th,countyname,percent)
+
+county_1617 <- combined_county_1617 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) 
+county_1617 <- subset(county_1617, !is.na(countyname))
+
+
+county_course_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,countyname)%>%
+  summarize(n_stu=n())
+
+county_overall_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(countyname)%>%
+  summarize(n_stu_total=n())
+
+combined_county_1718 <- county_course_1718 %>%
+  left_join(county_overall_1718,by=c("countyname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018") %>% 
+  select(course_cat_9th,countyname,percent)
+
+county_1718 <- combined_county_1718 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+county_1718 <- subset(county_1718, !is.na(countyname))
+
+
+
+
+county_course_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,countyname)%>%
+  summarize(n_stu=n())
+
+county_overall_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(countyname)%>%
+  summarize(n_stu_total=n())
+
+combined_county_1819 <- county_course_1819 %>%
+  left_join(county_overall_1819,by=c("countyname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019") %>% 
+  select(course_cat_9th,countyname,percent)
+
+county_1819 <- combined_county_1819 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+county_1819 <- subset(county_1819, !is.na(countyname))
+
+
+
+
+county_course_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,countyname)%>%
+  summarize(n_stu=n())
+
+county_overall_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(countyname)%>%
+  summarize(n_stu_total=n())
+
+combined_county_1920 <- county_course_1920 %>%
+  left_join(county_overall_1920,by=c("countyname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020") %>% 
+  select(course_cat_9th,countyname,percent)
+
+county_1920 <- combined_county_1920 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+county_1920 <- subset(county_1920, !is.na(countyname))
+
+
+
+
+county_course_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,countyname)%>%
+  summarize(n_stu=n())
+
+county_overall_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(countyname)%>%
+  summarize(n_stu_total=n())
+
+combined_county_2021 <- county_course_2021 %>%
+  left_join(county_overall_2021,by=c("countyname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021") %>% 
+  select(course_cat_9th,countyname,percent)
+
+county_2021 <- combined_county_2021 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+county_2021 <- subset(county_2021, !is.na(countyname))
+
+
+# Entry District ------
+district_course_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,districtname)%>%
+  summarize(n_stu=n())
+
+district_overall_1617 <- final_analytic_data %>%
+  filter(cohort_year=="2016-2017" & course_cat_9th!="")%>%
+  group_by(districtname)%>%
+  summarize(n_stu_total=n())
+
+combined_district_1617 <- district_course_1617 %>%
+  left_join(district_overall_1617,by=c("districtname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2016-2017") %>% 
+  select(course_cat_9th,districtname,percent)
+
+district_1617 <- combined_district_1617 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+
+
+
+district_course_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,districtname)%>%
+  summarize(n_stu=n())
+
+district_overall_1718 <- final_analytic_data %>%
+  filter(cohort_year=="2017-2018" & course_cat_9th!="")%>%
+  group_by(districtname)%>%
+  summarize(n_stu_total=n())
+
+combined_district_1718 <- district_course_1718 %>%
+  left_join(district_overall_1718,by=c("districtname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2017-2018") %>% 
+  select(course_cat_9th,districtname,percent)
+
+district_1718 <- combined_district_1718 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+
+
+
+district_course_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,districtname)%>%
+  summarize(n_stu=n())
+
+district_overall_1819 <- final_analytic_data %>%
+  filter(cohort_year=="2018-2019" & course_cat_9th!="")%>%
+  group_by(districtname)%>%
+  summarize(n_stu_total=n())
+
+combined_district_1819 <- district_course_1819 %>%
+  left_join(district_overall_1819,by=c("districtname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2018-2019") %>% 
+  select(course_cat_9th,districtname,percent)
+
+district_1819 <- combined_district_1819 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+
+
+
+district_course_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,districtname)%>%
+  summarize(n_stu=n())
+
+district_overall_1920 <- final_analytic_data %>%
+  filter(cohort_year=="2019-2020" & course_cat_9th!="")%>%
+  group_by(districtname)%>%
+  summarize(n_stu_total=n())
+
+combined_district_1920 <- district_course_1920 %>%
+  left_join(district_overall_1920,by=c("districtname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2019-2020") %>% 
+  select(course_cat_9th,districtname,percent)
+
+district_1920 <- combined_district_1920 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+
+
+
+
+district_course_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(course_cat_9th,districtname)%>%
+  summarize(n_stu=n())
+
+district_overall_2021 <- final_analytic_data %>%
+  filter(cohort_year=="2020-2021" & course_cat_9th!="")%>%
+  group_by(districtname)%>%
+  summarize(n_stu_total=n())
+
+combined_district_2021 <- district_course_2021 %>%
+  left_join(district_overall_2021,by=c("districtname"))%>%
+  mutate(percent=n_stu/n_stu_total*100,
+         percent=round(percent,digits=1),
+         cohort_year="2020-2021") %>% 
+  select(course_cat_9th,districtname,percent)
+
+district_2021 <- combined_district_2021 %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent)
+district_2021 <- subset(district_2021, !is.na(districtname))
+
+
+
+# School & District tables----
+school_list <- combined_school_2021 %>%
+  filter(percent>=75) %>% 
+  group_by(course_cat_9th)%>%
+  summarize(n_stu=n()) %>% 
+  mutate(percent=n_stu/362*100,
+         percent=round(percent,digits=1))
+
+school_percent <- school_list %>% 
+  select(course_cat_9th,percent) %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) %>% 
+  mutate(Level="School Level")
+
+###
+district_list <- combined_district_2021 %>%
+  filter(percent>=75) %>% 
+  group_by(course_cat_9th)%>%
+  summarize(n_stu=n()) %>% 
+  mutate(percent=n_stu/283*100,
+         percent=round(percent,digits=1))
+
+
+district_percent <- district_list %>% 
+  select(course_cat_9th,percent) %>% 
+  pivot_wider(names_from=course_cat_9th, values_from=percent) %>% 
+  mutate(Level="District Level")
+
+# County visualization -----
+library(gridExtra)
+
+County_visual <- read.csv("County_visual.csv") 
+
+County_long <- pivot_longer(County_visual, cols = -County, names_to = "Science", values_to = "Enrollment")
+
+
+# Create plots
+p1 <- ggplot(County_visual, aes(x=County, y=Applied))+
+  geom_bar(stat = "identity",position = position_dodge(), fill='#325694') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "", x="")+
+  ggtitle('Applied Science Enrollment %')
+p1
+p2 <- ggplot(County_visual, aes(x=County, y=Biology))+
+  geom_bar(stat = "identity",position = position_dodge(), fill='#129BBA') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "", x="")+
+  ggtitle('Biology Enrollment %')
+p2
+
+p3 <- ggplot(County_visual, aes(x=County, y=Chemistry))+
+  geom_bar(stat = "identity",position = position_dodge(), fill='#50C878') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "", x="")+
+  ggtitle("Chemistry Enrollment %")
+p3
+p4 <- ggplot(County_visual, aes(x=County, y=Other))+
+  geom_bar(stat = "identity",position = position_dodge(), fill='#056A54') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "", x="")+
+  ggtitle("Other Science Courses Enrollment %")
+p4
+p5 <- ggplot(County_visual, aes(x=County, y=Physics))+
+  geom_bar(stat = "identity",position = position_dodge(), fill='#CFCFC4') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+ #no background
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "", x="")+
+  ggtitle("Physics Enrollment %")
+p5
+
+
+# Arrange plots in a grid
+grid.arrange(p1, p2, p3, p4, p5, ncol = 2)
+
+# Export datasets -----
+install.packages("openxlsx")
+library(openxlsx)
+by_county <- "By County.xlsx"
+County <- list(
+
+    "1617" = county_1617,
+  #"1718" = county_1718,
+  "1819" = county_1819,
+  #"1920" = county_1920,
+  "2021" = county_2021
+)
+
+# Export the data frames to the Excel file
+write.xlsx(County, file = by_county)
+
+by_school <- "By School.xlsx"
+School <- list(
+  "1617" = school_1617,
+  #"1718" = school_1718,
+  "1819" = school_1819,
+  #"1920" = school_1920,
+  "2021" = school_2021
+)
+
+# Export the data frames to the Excel file
+write.xlsx(School, file = by_school)
+
+by_district <- "By District.xlsx"
+District <- list(
+  "1617" = district_1617,
+  #"1718" = district_1718,
+  "1819" = district_1819,
+  #"1920" = district_1920,
+  "2021" = district_2021
+)
+
+# Export the data frames to the Excel file
+write.xlsx(District, file = by_district)
+
+
+
+
+
+
+
+combined_county_2021 <- subset(combined_county_2021, !is.na(countyname))
+combined_school_2021 <- subset(combined_school_2021, !is.na(schoolname))
+
+
+
+
+
+combined <- "Combined.xlsx"
+Combined <- list(
+  "school" = combined_school_2021,
+  "district" = combined_district_2021
+)
+
+# Export the data frames to the Excel file
+write.xlsx(Combined, file = combined)
